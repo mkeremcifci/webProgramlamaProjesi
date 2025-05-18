@@ -1,15 +1,23 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
+
+import sessionMiddleware from './middleware/session.js';
 
 const app = express();
 const PORT = 6000;
 
-app.use(cors());
+app.use(cors({
+    credentials: true
+}));
+
+
 app.use(express.json());
+app.use(sessionMiddleware);
+
 
 app.get('/hello',(req, res) => {
-    const { name } = req.body;
-    res.json({message: `Merhaba, ${name}`}); 
+    res.json({message: `Merhaba`}); 
 })
 
 app.listen(PORT,()=>{
