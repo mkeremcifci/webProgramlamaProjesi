@@ -4,9 +4,16 @@ import session from 'express-session';
 
 import sessionConfig from './config/sessionConfig.js';
 import router from './routes/index.js';
+import connectDB from './data/db/index.js'
+
 
 const app = express();
 const PORT = 6000;
+
+
+connectDB()
+
+
 
 
 app.use(cors({
@@ -14,6 +21,7 @@ app.use(cors({
 }));
 
 app.use(sessionConfig)
+
 
 app.use(express.json());
 
