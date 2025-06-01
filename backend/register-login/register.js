@@ -1,49 +1,66 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import User from './data/models/User.js'; // Bu model dosyasının mevcut olduğunu varsayıyoruz
+import cors from 'cors';
+import bcrypt from 'bcrypt';
+
+import User from './data/models/User.js';
 
 const app = express();
-const PORT = 6060;
+const PORT = process.env.PORT || 3001;
 
+// Middlewares
+app.use(cors());
 app.use(express.json());
 
-// MongoDB bağlantısı
-mongoose.connect('mongodb://localhost:27017/webProgramlamaProjesi')
-  .then(() => console.log('MongoDB bağlantısı başarılı'))
+// MongoDB bağlantısı (tercihe göre cloud ya da local)
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://toprakkaya:1234@cluster0.jv0shqh.mongodb.net/webProgramlamaProjesi?retryWrites=true&w=majority";
+
+mongoose.connect(MONGO_URI)
+  .then(() => console.log("✅ MongoDB bağlantısı başarılı"))
   .catch((err) => {
-    console.error('MongoDB bağlantı hatası:', err);
+    console.error("❌ MongoDB bağlantı hatası:", err.message);
     process.exit(1);
   });
 
-// /register endpoint
-app.post('/register', async (req, res) => {
-  try {
-    const { username, email, password, profile } = req.body;
+// /api/register endpoint
+app.post('/api/register', async (req, res) => {
+  const { username, email, password, profile } = req.body;
 
-    // Kullanıcı zaten var mı kontrol et
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-    if (existingUser) {
-      return res.status(409).json({ message: 'Bu kullanıcı zaten mevcut.' });
+  try {
+    // Aynı kullanıcı adı veya email varsa hata döndür
+    const exists = await User.findOne({ $or: [{ username }, { email }] });
+    if (exists) {
+      return res.status(400).json({ error: "Bu kullanıcı adı veya email zaten var." });
     }
+
+    // İlgi alanı kontrolü
+    if (!Array.isArray(profile?.interests) || profile.interests.length === 0) {
+      return res.status(400).json({ error: "En az bir ilgi alanı seçmelisiniz." });
+    }
+
+    // Şifre hashleme
+    const hashed_password = await bcrypt.hash(password, 10);
 
     // Yeni kullanıcı oluştur
     const newUser = new User({
       username,
       email,
-      hashed_password: password, // Gerçekte hashlenmeli
+      hashed_password,
       profile,
+      role: 'user', // Varsayılan rol
       is_online: false
     });
 
     await newUser.save();
 
-    res.status(201).json({ message: 'Kullanıcı başarıyla kaydedildi.' });
-  } catch (error) {
-    console.error('Kayıt hatası:', error);
-    res.status(500).json({ message: 'Sunucu hatası' });
+    res.status(201).json({ message: "Kayıt başarılı", userId: newUser._id });
+  } catch (err) {
+    console.error("❌ Kayıt hatası:", err.message);
+    res.status(500).json({ error: "Kayıt sırasında sunucu hatası oluştu." });
   }
 });
 
+// Sunucu dinleme
 app.listen(PORT, () => {
-  console.log(`Sunucu aktif: http://localhost:${PORT}/register`);
+  console.log(`🚀 Sunucu çalışıyor: http://localhost:${PORT}`);
 });
