@@ -1,18 +1,38 @@
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import session from 'express-session';
+import dotenv from 'dotenv';
+
 import Interest from './data/models/Interests.js';
-import bcrypt from 'bcrypt'; 
-import User from './data/models/User.js'; 
+import User from './data/models/User.js';
 import Role from './data/models/Role.js';
 
+import sessionConfig from './config/sessionConfig.js';
+import connectDB from './data/db/index.js';
+
+import userRoutes from './routes/user.js';
+import discoverRoutes from './routes/discover.js';
+import messageRoutes from './routes/message.js';
+import settingsRoutes from './routes/settings.js';
+import notificationRoutes from './routes/notification.js';
+import authRoutes from './routes/auth.js';
+import router from './routes/index.js';
+
+dotenv.config();
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  credentials: true,
+  origin: true
+}));
+
 app.use(express.json());
+app.use(sessionConfig);
 
-
+// 🌱 Veritabanına rollerin tohumlanması
 async function seedRoles() {
   const existing = await Role.countDocuments();
   if (existing === 0) {
@@ -21,11 +41,13 @@ async function seedRoles() {
       { name: 'editor' },
       { name: 'admin' }
     ]);
-    console.log(" Roller başarıyla yüklendi.");
+    console.log("✅ Roller başarıyla yüklendi.");
   } else {
-    console.log("ℹ Roller zaten mevcut.");
+    console.log("ℹ️ Roller zaten mevcut.");
   }
 }
+
+// Giriş endpoint’i
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -38,29 +60,12 @@ app.post('/api/login', async (req, res) => {
 
     res.json({ message: "Giriş başarılı", userId: user._id, username: user.username });
   } catch (err) {
-    console.error(" Login hatası:", err.message);
+    console.error("Login hatası:", err.message);
     res.status(500).json({ error: "Sunucu hatası" });
   }
-  });
-
-// Endpoint'leri tanımla
-app.get('/hello', (req, res) => {
-  const { name } = req.body;
-  res.json({ message: `Merhaba, ${name}` });
 });
 
-app.get('/api/interests', async (req, res) => {
-  try {
-    console.log(" /api/interests isteği geldi");
-    const interests = await Interest.find({});
-    console.log(" İlgi alanları bulundu:", interests.length);
-    res.json(interests);
-  } catch (err) {
-    console.error("İlgi alanları alınamadı:", err.message);
-    res.status(500).json({ error: 'Veri alınamadı' });
-  }
-});
-
+// Kayıt endpoint’i
 app.post('/api/register', async (req, res) => {
   const { username, email, password, profile } = req.body;
 
@@ -76,23 +81,49 @@ app.post('/api/register', async (req, res) => {
     await newUser.save();
     res.json({ message: "Kayıt başarılı", userId: newUser._id });
   } catch (err) {
-    console.error(" Kayıt hatası:", err.message);
+    console.error("Kayıt hatası:", err.message);
     res.status(500).json({ error: "Kayıt sırasında hata oluştu." });
   }
 });
 
-// 🔧 Uygulamayı çalıştıran asıl fonksiyon
+// İlgi alanları endpoint’i
+app.get('/api/interests', async (req, res) => {
+  try {
+    const interests = await Interest.find({});
+    res.json(interests);
+  } catch (err) {
+    console.error("İlgi alanları alınamadı:", err.message);
+    res.status(500).json({ error: 'Veri alınamadı' });
+  }
+});
+
+// Test endpoint
+app.get('/hello', (req, res) => {
+  const { name } = req.body;
+  res.json({ message: `Merhaba, ${name}` });
+});
+
+// Geri kalan route'lar
+app.use('/users', userRoutes);
+app.use('/', discoverRoutes);
+app.use('/', messageRoutes);
+app.use('/', settingsRoutes);
+app.use('/', notificationRoutes);
+app.use('/', authRoutes);
+app.use('/', router);
+
+// Sunucuyu başlat
 async function startServer() {
   try {
-    await mongoose.connect("mongodb+srv://toprakkaya:1234@cluster0.jv0shqh.mongodb.net/webProgramlamaProjesi?retryWrites=true&w=majority");
-    console.log(" MongoDB bağlantısı başarılı");
+    await connectDB();
+    await seedRoles();
 
     app.listen(PORT, () => {
-      console.log(` Backend çalışıyor: http://localhost:${PORT}`);
+      console.log(`🚀 Backend çalışıyor: http://localhost:${PORT}`);
     });
   } catch (err) {
-    console.error(" MongoDB bağlantı hatası:", err.message);
+    console.error("❌ Sunucu başlatılamadı:", err.message);
   }
 }
 
-startServer(); // Uygulamayı başlat
+startServer();
