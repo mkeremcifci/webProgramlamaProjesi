@@ -11,6 +11,7 @@ import Role from './data/models/Role.js';
 
 import sessionConfig from './config/sessionConfig.js';
 import connectDB from './data/db/index.js';
+import { securityMiddleware, sanitizeInput } from './middleware/security.js';
 
 import userRoutes from './routes/user.js';
 import discoverRoutes from './routes/discover.js';
@@ -23,6 +24,10 @@ import router from './routes/index.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Güvenlik middleware'lerini uygula
+app.use(securityMiddleware);
+app.use(sanitizeInput);
 
 app.use(cors({
   credentials: true,
