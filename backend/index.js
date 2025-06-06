@@ -20,7 +20,10 @@ import settingsRoutes from './routes/settings.js';
 import notificationRoutes from './routes/notification.js';
 import authRoutes from './routes/auth.js';
 import router from './routes/index.js';
+
 import moderationRoutes from './routes/moderation.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+
 
 dotenv.config();
 const app = express();
@@ -37,6 +40,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(sessionConfig);
+app.use('/api', uploadRoutes);
 
 // 🌱 Veritabanına rollerin tohumlanması
 async function seedRoles() {
