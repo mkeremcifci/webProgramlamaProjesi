@@ -20,7 +20,10 @@ import settingsRoutes from './routes/settings.js';
 import notificationRoutes from './routes/notification.js';
 import authRoutes from './routes/auth.js';
 import router from './routes/index.js';
+
+import moderationRoutes from './routes/moderation.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+
 
 dotenv.config();
 const app = express();
@@ -118,6 +121,7 @@ app.use('/', settingsRoutes);
 app.use('/', notificationRoutes);
 app.use('/', authRoutes);
 app.use('/', router);
+app.use('/api/moderation', moderationRoutes);
 
 // Sunucuyu başlat
 async function startServer() {
